@@ -233,7 +233,7 @@ const seriffStartDeck = [
     new Gatling(),
 ];
 
-// Колода Бандита, верхнего игрока.
+// Колода Бандита
 const banditStartDeck = [
     new Trasher(),
     new Rogue(),
@@ -248,7 +248,7 @@ const game = new Game(seriffStartDeck, banditStartDeck);
 // Глобальный объект, позволяющий управлять скоростью всех анимаций.
 SpeedRate.set(2);
 
-// Запуск игры.
+// Запуск
 game.play(false, (winner) => {
     alert('Победил ' + winner.name);
 });

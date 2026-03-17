@@ -30,7 +30,10 @@ export default class TaskQueue {
 
     push(run, dispose, duration) {
         if (duration === undefined || duration === null) {
-            this.tasks.push({runAndContinue: run, dispose});
+            this.tasks.push({
+                runAndContinue: run,
+                dispose
+            });
         } else {
             this.tasks.push({
                 runAndContinue: (continuation) => {
@@ -42,6 +45,7 @@ export default class TaskQueue {
                 dispose
             });
         }
+
         runNextTask(this);
     }
 
