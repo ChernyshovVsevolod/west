@@ -5,7 +5,7 @@ import SpeedRate from './SpeedRate.js';
 
 // Отвечает является ли карта уткой.
 function isDuck(card) {
-    return card && card.quacks && card.swims;
+    return card instanceof Duck;
 }
 
 // Отвечает является ли карта собакой.
@@ -28,39 +28,60 @@ function getCreatureDescription(card) {
 }
 
 
-
-// Основа для утки.
-function Duck() {
-    this.quacks = function () { console.log('quack') };
-    this.swims = function () { console.log('float: both;') };
+// Новый базовый класс
+class Creature extends Card {
+    getDescriptions() {
+        const baseDescriptions = super.getDescriptions();
+        return [getCreatureDescription(this), ...baseDescriptions];
+    }
 }
 
 
-// Основа для собаки.
-function Dog() {
+// Утка
+class Duck extends Creature {
+    constructor() {
+        super('Мирная утка', 2);
+    }
+
+    quacks() {
+        console.log('quack');
+    }
+
+    swims() {
+        console.log('float: both;');
+    }
 }
 
 
-// Колода Шерифа, нижнего игрока.
+// Собака
+class Dog extends Creature {
+    constructor() {
+        super('Пес-бандит', 3);
+    }
+}
+
+
+
+// Колода Шерифа
 const seriffStartDeck = [
-    new Card('Мирный житель', 2),
-    new Card('Мирный житель', 2),
-    new Card('Мирный житель', 2),
+    new Duck(),
+    new Duck(),
+    new Duck(),
 ];
 
-// Колода Бандита, верхнего игрока.
+// Колода Бандита
 const banditStartDeck = [
-    new Card('Бандит', 3),
+    new Dog(),
 ];
 
 
 // Создание игры.
 const game = new Game(seriffStartDeck, banditStartDeck);
 
-// Глобальный объект, позволяющий управлять скоростью всех анимаций.
+// Скорость
 SpeedRate.set(1);
 
-// Запуск игры.
+// Запуск
 game.play(false, (winner) => {
     alert('Победил ' + winner.name);
 });
