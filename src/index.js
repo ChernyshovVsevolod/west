@@ -28,6 +28,19 @@ function getCreatureDescription(card) {
 }
 
 class Creature extends Card {
+    constructor(name, power) {
+        super(name, power);
+        this._currentPower = power;
+    }
+
+    get currentPower() {
+        return this._currentPower;
+    }
+
+    set currentPower(value) {
+        this._currentPower = Math.min(value, this.maxPower);
+    }
+
     getDescriptions() {
         return [getCreatureDescription(this), ...super.getDescriptions()];
     }
@@ -73,8 +86,17 @@ class Gatling extends Creature {
         const taskQueue = new TaskQueue();
         const {oppositePlayer} = gameContext;
 
-        for (const position of oppositePlayer.table) {
-            taskQueue.push(onDone => this.dealDamageToCreature(2, position, gameContext, onDone));
+        for (const card of oppositePlayer.table) {
+            if (card) {
+                taskQueue.push(onDone => {
+                    // Проверка: жива ли еще карта на момент выстрела?
+                    if (oppositePlayer.table.includes(card)) {
+                        this.dealDamageToCreature(2, card, gameContext, onDone);
+                    } else {
+                        onDone();
+                    }
+                });
+            }
         }
 
         taskQueue.continueWith(continuation);
@@ -123,18 +145,100 @@ class Lad extends Dog {
     }
 }
 
+class Rogue extends Creature {
+    constructor() {
+        super('Изгой', 2);
+    }
+
+    doBeforeAttack(gameContext, continuation) {
+        const {oppositePlayer, position} = gameContext;
+        const target = oppositePlayer.table[position];
+
+        if (target) {
+            const targetProto = Object.getPrototypeOf(target);
+            const abilities = ['modifyDealedDamageToCreature', 'modifyDealedDamageToPlayer', 'modifyTakenDamage'];
+
+            abilities.forEach(ability => {
+                if (targetProto.hasOwnProperty(ability)) {
+                    this[ability] = targetProto[ability];
+                    delete targetProto[ability];
+                }
+            });
+        }
+        gameContext.updateView();
+        continuation();
+    }
+}
+
+class Brewer extends Duck {
+    constructor() {
+        super('Пивовар', 2);
+    }
+
+    doBeforeAttack(gameContext, continuation) {
+        const {currentPlayer, oppositePlayer} = gameContext;
+        const allCards = currentPlayer.table.concat(oppositePlayer.table);
+        const taskQueue = new TaskQueue();
+
+        allCards.forEach(card => {
+            if (isDuck(card)) {
+                card.maxPower += 1;
+                card.currentPower += 2;
+                taskQueue.push(onDone => card.view.signalHeal(() => {
+                    card.updateView();
+                    onDone();
+                }));
+            }
+        });
+        taskQueue.continueWith(continuation);
+    }
+}
+
+class PseudoDuck extends Dog {
+    constructor() {
+        super('Псевдоутка', 3);
+    }
+
+    quacks() { console.log('quack'); }
+    swims() { console.log('float: both;'); }
+}
+
+class Nemo extends Creature {
+    constructor() {
+        super('Немо', 4);
+    }
+
+    doBeforeAttack(gameContext, continuation) {
+        const {oppositePlayer, position} = gameContext;
+        const target = oppositePlayer.table[position];
+
+        if (target) {
+            Object.setPrototypeOf(this, Object.getPrototypeOf(target));
+            gameContext.updateView();
+            if (this.doBeforeAttack !== Nemo.prototype.doBeforeAttack) {
+                this.doBeforeAttack(gameContext, continuation);
+            } else {
+                continuation();
+            }
+        } else {
+            continuation();
+        }
+    }
+}
+
 const seriffStartDeck = [
     new Duck(),
-    new Duck(),
-    new Duck(),
+    new Brewer(),
+    new Nemo(),
     new Gatling(),
 ];
 
 // Колода Бандита, верхнего игрока.
 const banditStartDeck = [
     new Trasher(),
-    new Dog(),
-    new Dog(),
+    new Rogue(),
+    new PseudoDuck(),
+    new Lad(),
 ];
 
 
@@ -142,7 +246,7 @@ const banditStartDeck = [
 const game = new Game(seriffStartDeck, banditStartDeck);
 
 // Глобальный объект, позволяющий управлять скоростью всех анимаций.
-SpeedRate.set(1);
+SpeedRate.set(2);
 
 // Запуск игры.
 game.play(false, (winner) => {
